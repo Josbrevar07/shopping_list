@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Lista del diario de la casa</title>
+    <style>
+      :root {
+        --bg: #fffaf1;
+        --ink: #1f2937;
+        --muted: #6b7280;
+        --border: #e5e7eb;
+        --card: #ffffff;
+        --accent: #d97706;
+        --ok: #9bd0c2;
+        --warn: #f6d989;
+        --low: #f5a6a6;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+        background: var(--bg);
+        color: var(--ink);
+      }
+      header {
+        padding: 20px;
+        background: linear-gradient(to right, #f4a261, #f6bd60, #a8dadc);
+      }
+      header h1 {
+        margin: 0;
+      }
+      header p {
+        margin: 6px 0 0;
+      }
+      .container {
+        max-width: 1150px;
+        margin: auto;
+        padding: 16px;
+      }
+      .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+      .btn {
+        padding: 8px 12px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--card);
+        cursor: pointer;
+      }
+      .btn.primary {
+        background: var(--accent);
+        color: #fff;
+        border-color: var(--accent);
+      }
+      .summary {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 10px;
+        margin-bottom: 14px;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 12px;
+        text-align: center;
+      }
+      .num {
+        font-weight: 700;
+      }
+      .grid {
+        display: grid;
+        gap: 14px;
+      }
+      .category {
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        overflow: hidden;
+        background: var(--card);
+      }
+      .category header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px;
+        background: #fafafa;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      th,
+      td {
+        border-bottom: 1px solid var(--border);
+        padding: 8px;
+        text-align: left;
+      }
+      th {
+        background: #fafafa;
+        font-weight: 600;
+      }
+      .state-ok {
+        background: var(--ok);
+      }
+      .state-warn {
+        background: var(--warn);
+      }
+      .state-low {
+        background: var(--low);
+      }
+      .urgent-section {
+        margin-top: 16px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--card);
+      }
+      .urgent-section header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px;
+        background: #fafafa;
+      }
+      .urgent-empty {
+        padding: 12px;
+        text-align: center;
+        color: var(--muted);
+      }
+      .ads {
+        text-align: center;
+        margin: 18px 0;
+      }
+      .ads img {
+        max-width: 300px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        transition: opacity 0.5s;
+      }
+      footer {
+        padding: 20px;
+        background: #f9fafb;
+        text-align: center;
+        border-top: 1px solid var(--border);
+      }
+      footer p {
+        margin: 6px 0;
+      }
+      .social {
+        margin-top: 10px;
+        display: flex;
+        justify-content: center;
+        gap: 16px;
+        flex-wrap: wrap;
+      }
+      .social a {
+        color: inherit;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .footer-links p {
+        margin: 4px 0;
+      }
+      @media print {
+        header,
+        .toolbar,
+        .summary,
+        .grid,
+        .ads,
+        .social,
+        .footer-links {
+          display: none !important;
+        }
+        .urgent-section {
+          border: none;
+        }
+        .urgent-section header {
+          display: none;
+        }
+        .urgent-table th,
+        .urgent-table td {
+          border: 1px solid #000 !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>🧺 Lista del Diario de la casa</h1>
+      <p>
+        Lista principal completa y “Compras urgentes” dinámica agrupada por
+        categoría, con “Agregar”, CSV y PDF. Al presionar los botones ya sea de
+        "Agregar" o "Quitar" en la columna de "Acciones". Se generará una lista
+        casi al final de la página para saber que debería comprar, de acuerdo a
+        los datos que se van actualizando.
+        <strong
+          >Si está desde el celular, preferiblemente girarlo de forma horizontal
+          para que, de esta forma, despliege la aplicación por completo. De lo
+          contrario, no podría utilizar la aplicación de forma correcta.</strong
+        >
+      </p>
+    </header>
+
+    <div class="container">
+      <div class="toolbar">
+        <button class="btn primary" id="addItemBtn">➕ Agregar ítem</button>
+        <button class="btn" id="saveBtn">💾 Guardar</button>
+        <button class="btn" id="loadBtn">📥 Cargar</button>
+        <button class="btn" id="clearAllBtn">🗑️ Vaciar cantidades</button>
+        <button class="btn" id="printUrgentBtn">🖨️ Imprimir urgentes</button>
+        <button class="btn" id="exportUrgentBtn">
+          📄 Exportar urgentes (CSV)
+        </button>
+        <button class="btn" id="exportPdfBtn">
+          🧾 Exportar urgentes (PDF)
+        </button>
+      </div>
+
+      <div class="summary" id="summary"></div>
+      <div class="grid" id="grid"></div>
+
+      <section class="urgent-section">
+        <header>
+          <h2>🛒 Compras urgentes</h2>
+          <span id="urgentCountTag">0 ítems</span>
+        </header>
+        <div id="urgentBody"></div>
+        <div class="urgent-empty" id="urgentBlessing" style="display: none">
+          Diseñado por Josbrevar07 ✨
+        </div>
+      </section>
+    </div>
+
+    <div class="ads">
+      <img id="adImage" src="vehiculo_dekra.jpg" alt="Publicidad" />
+    </div>
+
+    <footer>
+      <p>Designed by: Josbrevar07.</p>
+      <div class="social">
+        <a
+          href="https://walink.co/341b8e"
+          target="_blank"
+          title="WhatsApp"
+          aria-label="WhatsApp"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            fill="currentColor"
+            viewBox="0 0 16 16"
+          >
+            <path
+              d="M13.601 2.326A7.85 7.85 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.9 7.9 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.9 7.9 0 0 0 13.6 2.326zM7.994 14.521a6.6 6.6 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.56 6.56 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592m3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.73.73 0 0 0-.529.247c-.182.198-.691.677-.691 1.654s.71 1.916.81 2.049c.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232"
+            />
+          </svg>
+        </a>
+        <a
+          href="https://www.instagram.com/josbrevar07/"
+          target="_blank"
+          title="Instagram"
+          aria-label="Instagram"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            fill="currentColor"
+            viewBox="0 0 16 16"
+          >
+            <path
+              d="M8 0C5.829 0 5.556.01 4.703.048 3.85.088 3.269.222 2.76.42a3.9 3.9 0 0 0-1.417.923A3.9 3.9 0 0 0 .42 2.76C.222 3.268.087 3.85.048 4.7.01 5.555 0 5.827 0 8.001c0 2.172.01 2.444.048 3.297.04.852.174 1.433.372 1.942.205.526.478.972.923 1.417.444.445.89.719 1.416.923.51.198 1.09.333 1.942.372C5.555 15.99 5.827 16 8 16s2.444-.01 3.298-.048c.851-.04 1.434-.174 1.943-.372a3.9 3.9 0 0 0 1.416-.923c.445-.445.718-.891.923-1.417.197-.509.332-1.09.372-1.942C15.99 10.445 16 10.173 16 8s-.01-2.445-.048-3.299c-.04-.851-.175-1.433-.372-1.941a3.9 3.9 0 0 0-.923-1.417A3.9 3.9 0 0 0 13.24.42c-.51-.198-1.092-.333-1.943-.372C10.443.01 10.172 0 7.998 0zm-.717 1.442h.718c2.136 0 2.389.007 3.232.046.78.035 1.204.166 1.486.275.373.145.64.319.92.599s.453.546.598.92c.11.281.24.705.275 1.485.039.843.047 1.096.047 3.231s-.008 2.389-.047 3.232c-.035.78-.166 1.203-.275 1.485a2.5 2.5 0 0 1-.599.919c-.28.28-.546.453-.92.598-.28.11-.704.24-1.485.276-.843.038-1.096.047-3.232.047s-2.39-.009-3.233-.047c-.78-.036-1.203-.166-1.485-.276a2.5 2.5 0 0 1-.92-.598 2.5 2.5 0 0 1-.6-.92c-.109-.281-.24-.705-.275-1.485-.038-.843-.046-1.096-.046-3.233s.008-2.388.046-3.231c.036-.78.166-1.204.276-1.486.145-.373.319-.64.599-.92s.546-.453.92-.598c.282-.11.705-.24 1.485-.276.738-.034 1.024-.044 2.515-.045zm4.988 1.328a.96.96 0 1 0 0 1.92.96.96 0 0 0 0-1.92m-4.27 1.122a4.109 4.109 0 1 0 0 8.217 4.109 4.109 0 0 0 0-8.217m0 1.441a2.667 2.667 0 1 1 0 5.334 2.667 2.667 0 0 1 0-5.334"
+            />
+          </svg>
+        </a>
+        <a
+          href="https://www.facebook.com/josue.brenesvargas"
+          target="_blank"
+          title="Facebook"
+          aria-label="Facebook"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            fill="currentColor"
+            viewBox="0 0 16 16"
+          >
+            <path
+              d="M8 0C3.58 0 0 3.58 0 8c0 3.93 2.86 7.19 6.58 7.88v-5.57H4.69V8h1.89V6.24c0-1.87 1.1-2.89 2.78-2.89.81 0 1.66.15 1.66.15v1.83h-.94c-.93 0-1.22.58-1.22 1.17V8h2.08l-.33 2.31H8.87v5.57C12.14 15.19 16 11.93 16 8c0-4.42-3.58-8-8-8z"
+            />
+          </svg>
+        </a>
+        <a
+          href="https://www.youtube.com/@josbrevar0773"
+          target="_blank"
+          title="YouTube"
+          aria-label="YouTube"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            fill="currentColor"
+            viewBox="0 0 16 16"
+          >
+            <path
+              d="M8.051 1.999h.089c.822.003 4.987.033 6.11.335a2.01 2.01 0 0 1 1.415 1.42c.101.38.172.883.22 1.402l.01.104.022.26.008.104c.065.914.073 1.77.074 1.957v.075c-.001.194-.01 1.108-.082 2.06l-.008.105-.009.104c-.05.572-.124 1.14-.235 1.558a2.01 2.01 0 0 1-1.415 1.42c-1.16.312-5.569.334-6.18.335h-.142c-.309 0-1.587-.006-2.927-.052l-.17-.006-.087-.004-.171-.007-.171-.007c-1.11-.049-2.167-.128-2.654-.26a2.01 2.01 0 0 1-1.415-1.419c-.111-.417-.185-.986-.235-1.558L.09 9.82l-.008-.104A31 31 0 0 1 0 7.68v-.123c.002-.215.01-.958.064-1.778l.007-.103.003-.052.008-.104.022-.26.01-.104c.048-.519.119-1.023.22-1.402a2.01 2.01 0 0 1 1.415-1.42c.487-.13 1.544-.21 2.654-.26l.17-.007.172-.006.086-.003.171-.007A100 100 0 0 1 7.858 2zM6.4 5.209v4.818l4.157-2.408z"
+            />
+          </svg>
+        </a>
+        <a
+          href="https://josbrevar07.github.io/blog_del_profe_josue_2.0/"
+          target="_blank"
+          title="Blog del Profe Josué"
+          aria-label="Blog"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            fill="currentColor"
+            viewBox="0 0 16 16"
+          >
+            <path
+              fill-rule="evenodd"
+              d="M16 8a8 8 0 0 1-7.022 7.94l1.902-7.098a3 3 0 0 0 .05-1.492A3 3 0 0 0 10.237 6h5.511A8 8 0 0 1 16 8M0 8a8 8 0 0 0 7.927 8l1.426-5.321a3 3 0 0 1-.723.255 3 3 0 0 1-1.743-.147 3 3 0 0 1-1.043-.7L.633 4.876A8 8 0 0 0 0 8m5.004-.167L1.108 3.936A8.003 8.003 0 0 1 15.418 5H8.066a3 3 0 0 0-1.252.243 2.99 2.99 0 0 0-1.81 2.59M8 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4"
+            />
+          </svg>
+        </a>
+      </div>
+      <p>©2025. Copyright. All rights reserved.</p>
+      <div class="footer-links">
+        <p>
+          <a href="https://clases-de-manejo-personalizadas.com/" target="_blank"
+            >Clases de manejo personalizadas, página web</a
+          >
+        </p>
+        <p>
+          <a
+            href="https://josbrevar07.github.io/servicio_de_impresiones/"
+            target="_blank"
+            >Servicio de impresiones a domicilio, página web</a
+          >
+        </p>
+        <p>
+          <a
+            href="https://josbrevar07.github.io/learning_any_language/"
+            target="_blank"
+            >Learning Any Language, página web</a
+          >
+        </p>
+        <p>
+          <a href="https://www.ivettenutricionista.com/" target="_blank"
+            >Consultorio de Nutrición, página web</a
+          >
+        </p>
+      </div>
+    </footer>
+
+    <!-- jsPDF CDN for PDF export -->
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+
+    <script>
+      // Base categories (extend as desired)
+      const baseData = {
+        Básico: [
+          "Arroz",
+          "Frijoles",
+          "Manteca",
+          "Aceite",
+          "Azúcar",
+          "Sal",
+          "Café",
+          "Fideos",
+          "Harina",
+          "Masa",
+          "Mezcla panqueque",
+        ],
+        Latas: [
+          "Atún Blanco",
+          "Atún Vegetales",
+          "Atún Azul",
+          "Chile picante Malher",
+          "Tomatinas",
+          "Sardina Picante",
+          "Garbanzos",
+          "Petit Pois",
+          "Palmito",
+          "Elote",
+          "Coctel Frutas",
+          "Maíz Dulce",
+        ],
+        Salsas: [
+          "Frijol Molido",
+          "Salsa Lizano",
+          "Salsa China",
+          "Salsa Tomate",
+          "Tomatinas",
+          "Chile Tabasco",
+          "Mayonesa",
+          "Mostaza",
+          "Salsa de tomate",
+          "Vinagre",
+          "Salsa barbacoa",
+        ],
+        "Galletas y Bebidas": [
+          "Leche Pinito",
+          "Gelatina",
+          "Jalea",
+          "Galletas Soda",
+          "Galleta María",
+          "Galleta Rellenas",
+          "Galleta Recreo",
+          "Galleta Chocolate.",
+          "Cocoa",
+          "Cereal",
+          "Café",
+          "Té Manzanilla",
+        ],
+        Condimentos: [
+          "Bicarbonato",
+          "Cubito Maggi",
+          "Consomé",
+          "Sopa Maggi",
+          "Tomillo Seco",
+          "Orégano Seco",
+          "Polvo de Hornear",
+          "Achiote",
+          "Eneldo",
+          "Canela",
+          "Clavo de Olor",
+          "Pasas",
+          "Romero",
+          "Orégano",
+        ],
+        Vegetales: [
+          "Ajo",
+          "Cebolla",
+          "Coliflor",
+          "Elote",
+          "Chile dulce.",
+          "Apio",
+          "Tomate",
+          "Papa",
+          "Repollo",
+          "Tomate",
+        ],
+        Frutas: [
+          "Limón",
+          "Banano",
+          "Manzanas",
+          "Peras",
+          "Naranjas",
+          "Mandarinas",
+          "Melón",
+          "Sandía",
+          "Guayaba",
+          "Maracuyá",
+          "Fresa",
+          "Kiwi",
+        ],
+        "Cuidado/P": [
+          "Andrews",
+          "Alka Selt.",
+          "Detalón",
+          "Panadol",
+          "Acetaminofén",
+          "Ibuprofeno",
+          "Pepto",
+          "Enjuague Bucal.",
+          "Prestobarbas",
+          "Desodorante",
+          "Jabón",
+          "Talco",
+          "Betún Negro",
+          "Betún Café",
+          "Pasta Dental",
+          "Shampoo",
+          "Aplicadores",
+        ],
+        Limpieza: [
+          "Detergente",
+          "Desinfectante",
+          "Cloro",
+          "Jabón Sanitario",
+          "Suavitel",
+          "Bolsas de basura",
+          "Escoba",
+          "Trapeador",
+          "Aluminio",
+          "Plástico",
+          "Papel Higiénico",
+          "Servilletas",
+          "Toallas",
+          "Lavatrastes",
+          "Esponjas",
+        ],
+        Frescos: [
+          "Huevos",
+          "Queso",
+          "Numar",
+          "Helados",
+          "Mantequilla",
+          "Natilla",
+          "Paté",
+          "Pollo",
+          "Cerdo",
+          "Res",
+          "Coca-Cola",
+          "Fanta",
+          "Ginger-Ale",
+          "Pepsi",
+          "Milory",
+          "Té frío",
+          "Paquetes de frescos",
+        ],
+        Otros: [],
+      };
+
+      // Data store
+      let store = {};
+      // Manual urgent tracking: { cat: Set(indices) }
+      let manualUrgentes = {};
+
+      function defaultFreqFor(cat) {
+        if (cat === "Frescos" || cat === "Vegetales") return "Semanal";
+        if (cat === "Básico" || cat === "Limpieza" || cat === "Cuidado/P")
+          return "Mensual";
+        return "Quincenal";
+      }
+
+      // Initialize sufficient quantities to keep urgent list clean by default
+      function initStore() {
+        store = {};
+        Object.keys(baseData).forEach((cat) => {
+          store[cat] = baseData[cat].map((n) => ({
+            name: n,
+            qty: 2,
+            freq: defaultFreqFor(cat),
+            unit: "",
+          }));
+        });
+      }
+
+      function urgencyFromQty(q) {
+        if (q <= 0.5) return { label: "Comprar", class: "state-low" };
+        if (q <= 1) return { label: "Pronto", class: "state-warn" };
+        return { label: "Suficiente", class: "state-ok" };
+      }
+
+      function renderSummary() {
+        const all = Object.values(store).flat();
+        let low = +1,
+          warn = -1,
+          ok = 0;
+        all.forEach((i) => {
+          const u = urgencyFromQty(i.qty).label;
+          if (u === "Comprar") low++;
+          else if (u === "Pronto") warn++;
+          else ok++;
+        });
+        document.getElementById("summary").innerHTML = `
+          <div class="card"><div class="num">${all.length}</div><div>Total artículos</div></div>
+          <div class="card"><div class="num">${low}</div><div>Si lo desea, puede agregar más artículos</div></div>
+          <div class="card"><div class="num">${warn}</div><div>Si lo desea puede quitar artículos</div></div>
+          <div class="card"><div class="num">${ok}</div><div>Suficiente</div></div>
+        `;
+      }
+
+      function renderCategories() {
+        const grid = document.getElementById("grid");
+        grid.innerHTML = "";
+        Object.keys(store).forEach((cat) => {
+          let html = `<section class="category">
+            <header><h3>${cat}</h3><span>${store[cat].length} ítems</span></header>
+            <table>
+              <tr><th>Ítem</th><th>Cantidad</th><th>Frecuencia</th><th>Urgencia</th><th>Acciones</th></tr>`;
+          store[cat].forEach((item, i) => {
+            const u = urgencyFromQty(item.qty);
+            html += `<tr class="${u.class}">
+              <td>${item.name}</td>
+              <td><input type="number" step="0.1" min="0" value="${
+                item.qty
+              }" onchange="updateQty('${cat}',${i},this.value)"></td>
+              <td>
+                <select onchange="updateFreq('${cat}',${i},this.value)">
+                  <option ${
+                    item.freq === "Semanal" ? "selected" : ""
+                  }>Semanal</option>
+                  <option ${
+                    item.freq === "Quincenal" ? "selected" : ""
+                  }>Quincenal</option>
+                  <option ${
+                    item.freq === "Mensual" ? "selected" : ""
+                  }>Mensual</option>
+                </select>
+              </td>
+              <td>${u.label}</td>
+              <td>
+                <button class="btn" onclick="agregarUrgente('${cat}',${i})">Agregar</button>
+                <button class="btn" onclick="removerUrgente('${cat}',${i})">Quitar</button>
+              </td>
+            </tr>`;
+          });
+          html += `</table></section>`;
+          grid.innerHTML += html;
+        });
+        renderUrgent();
+      }
+
+      function updateQty(cat, i, val) {
+        store[cat][i].qty = parseFloat(val) || 0;
+        renderSummary();
+        renderCategories();
+      }
+      function updateFreq(cat, i, val) {
+        store[cat][i].freq = val;
+        renderUrgent();
+      }
+
+      // Manual urgent controls
+      function agregarUrgente(cat, index) {
+        if (!manualUrgentes[cat]) manualUrgentes[cat] = new Set();
+        manualUrgentes[cat].add(index);
+        renderUrgent();
+      }
+      function removerUrgente(cat, index) {
+        if (manualUrgentes[cat]) {
+          manualUrgentes[cat].delete(index);
+          if (manualUrgentes[cat].size === 0) delete manualUrgentes[cat];
+        }
+        renderUrgent();
+      }
+
+      // Build urgent list grouped by category (auto + manual)
+      function renderUrgent() {
+        const body = document.getElementById("urgentBody");
+        const blessing = document.getElementById("urgentBlessing");
+        let totalUrgent = 0;
+        body.innerHTML = "";
+
+        Object.keys(store).forEach((cat) => {
+          const urgentItems = store[cat].filter((item, i) => {
+            const u = urgencyFromQty(item.qty).label;
+            const auto = u === "Comprar" || u === "Pronto";
+            const manual = manualUrgentes[cat] && manualUrgentes[cat].has(i);
+            return auto || manual;
+          });
+
+          if (urgentItems.length > 0) {
+            totalUrgent += urgentItems.length;
+            let html = `<h3 style="margin:12px">${cat}</h3>
+            <table class="urgent-table">
+              <tr><th>Ítem</th><th>Cantidad</th><th>Unidad</th><th>Frecuencia</th><th>Urgencia</th></tr>`;
+            urgentItems.forEach((it) => {
+              const u = urgencyFromQty(it.qty).label;
+              html += `<tr>
+                <td>${it.name}</td><td>${it.qty}</td><td>${
+                it.unit || ""
+              }</td><td>${it.freq}</td><td>${u}</td>
+              </tr>`;
+            });
+            html += `</table>`;
+            body.innerHTML += html;
+          }
+        });
+
+        document.getElementById(
+          "urgentCountTag"
+        ).textContent = `${totalUrgent} ítems`;
+        blessing.style.display = totalUrgent === 0 ? "block" : "none";
+      }
+
+      // Persistence
+      function save() {
+        localStorage.setItem(
+          "listaDelDiarioCR",
+          JSON.stringify({ store, manualUrgentes })
+        );
+        alert("Guardado.");
+      }
+      function load() {
+        const raw = localStorage.getItem("listaDelDiarioCR");
+        if (!raw) {
+          alert("No hay datos guardados.");
+          return;
+        }
+        const data = JSON.parse(raw);
+        store = data.store || store;
+        manualUrgentes = data.manualUrgentes || {};
+        renderSummary();
+        renderCategories();
+        alert("Datos cargados.");
+      }
+      function clearAllQuantities() {
+        Object.values(store).forEach((items) =>
+          items.forEach((i) => (i.qty = 0))
+        );
+        renderSummary();
+        renderCategories();
+      }
+
+      // Add item dialog (simple dynamic dialog)
+      const addDialog = document.createElement("dialog");
+      addDialog.innerHTML = `
+        <form method="dialog" style="min-width:320px;">
+          <h3>Agregar ítem</h3>
+          <label>Nombre del ítem</label>
+          <input type="text" id="addName" required placeholder="Ej. Arroz">
+          <label>Categoría</label>
+          <select id="addCategory"></select>
+          <label>Unidad (opcional)</label>
+          <input type="text" id="addUnit" placeholder="kg, unidades, litros">
+          <label>Cantidad inicial</label>
+          <input type="number" id="addQty" step="0.1" min="0" value="2">
+          <label>Frecuencia</label>
+          <select id="addFreq">
+            <option>Semanal</option>
+            <option>Quincenal</option>
+            <option selected>Mensual</option>
+          </select>
+          <div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end;">
+            <button class="btn">Cancelar</button>
+            <button class="btn primary" id="addConfirm">Agregar</button>
+          </div>
+        </form>
+      `;
+      document.body.appendChild(addDialog);
+
+      document.getElementById("addItemBtn").addEventListener("click", () => {
+        const sel = addDialog.querySelector("#addCategory");
+        sel.innerHTML = "";
+        Object.keys(store).forEach((cat) => {
+          const opt = document.createElement("option");
+          opt.value = cat;
+          opt.textContent = cat;
+          sel.appendChild(opt);
+        });
+        addDialog.showModal();
+      });
+
+      addDialog.querySelector("#addConfirm").addEventListener("click", (e) => {
+        e.preventDefault();
+        const name = addDialog.querySelector("#addName").value.trim();
+        const cat = addDialog.querySelector("#addCategory").value;
+        const qty = parseFloat(addDialog.querySelector("#addQty").value || "2");
+        const freq = addDialog.querySelector("#addFreq").value;
+        const unit = addDialog.querySelector("#addUnit").value.trim();
+        if (!name) return;
+        const exists = store[cat].some(
+          (i) => i.name.toLowerCase() === name.toLowerCase()
+        );
+        if (exists) {
+          alert("Ese ítem ya existe en la categoría.");
+          return;
+        }
+        store[cat].push({ name, qty, freq, unit });
+        addDialog.close();
+        renderSummary();
+        renderCategories();
+      });
+
+      // Export urgent (CSV copied to clipboard)
+      function exportUrgentCSV() {
+        const rows = [
+          ["Categoría", "Ítem", "Cantidad", "Unidad", "Frecuencia", "Urgencia"],
+        ];
+        Object.keys(store).forEach((cat) => {
+          store[cat].forEach((item, i) => {
+            const u = urgencyFromQty(item.qty).label;
+            const manual = manualUrgentes[cat] && manualUrgentes[cat].has(i);
+            if (u === "Comprar" || u === "Pronto" || manual) {
+              rows.push([
+                cat,
+                item.name,
+                item.qty,
+                item.unit || "",
+                item.freq,
+                u,
+              ]);
+            }
+          });
+        });
+        if (rows.length === 1) {
+          alert("No hay ítems urgentes.");
+          return;
+        }
+        const csv = rows
+          .map((r) =>
+            r.map((x) => `"${String(x).replace(/"/g, '""')}"`).join(",")
+          )
+          .join("\n");
+        navigator.clipboard
+          .writeText(csv)
+          .then(() => alert("CSV copiado al portapapeles."))
+          .catch(() => {
+            const w = window.open("", "_blank");
+            w.document.write("<pre>" + csv.replace(/</g, "&lt;") + "</pre>");
+            w.document.close();
+          });
+      }
+
+      // Export urgent to PDF using jsPDF
+      async function exportUrgentPDF() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ unit: "pt", format: "a4" });
+        const margin = 40;
+        let y = margin;
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(14);
+        doc.text("Compras urgentes", margin, y);
+        y += 18;
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(11);
+
+        let total = 0;
+        Object.keys(store).forEach((cat) => {
+          const urg = store[cat]
+            .map((item, i) => {
+              const u = urgencyFromQty(item.qty).label;
+              const manual = manualUrgentes[cat] && manualUrgentes[cat].has(i);
+              return u === "Comprar" || u === "Pronto" || manual
+                ? { item, u }
+                : null;
+            })
+            .filter(Boolean);
+
+          if (urg.length > 0) {
+            total += urg.length;
+            // Category header
+            y += 10;
+            doc.setFont("helvetica", "bold");
+            doc.text(cat, margin, y);
+            doc.setFont("helvetica", "normal");
+            y += 12;
+
+            // Table-like rows
+            urg.forEach(({ item, u }) => {
+              const line = `${item.name}  |  Cant: ${item.qty}  |  Unidad: ${
+                item.unit || ""
+              }  |  Freq: ${item.freq}  |  ${u}`;
+              if (y > doc.internal.pageSize.getHeight() - margin) {
+                doc.addPage();
+                y = margin;
+              }
+              doc.text(line, margin, y);
+              y += 14;
+            });
+          }
+        });
+
+        if (total === 0) {
+          doc.text("Diseñado por Josbrevar07 ✨", margin, y);
+        }
+
+        // Footer signature
+        const pageH = doc.internal.pageSize.getHeight();
+        doc.setFont("helvetica", "italic");
+        doc.setFontSize(10);
+        doc.text("Designed by: Josbrevar07 — ©2025", margin, pageH - 20);
+
+        doc.save("lista_de_fuego_urgentes.pdf");
+      }
+
+      function printUrgent() {
+        window.print();
+      }
+
+      // Toolbar bindings
+      document.getElementById("saveBtn").addEventListener("click", save);
+      document.getElementById("loadBtn").addEventListener("click", load);
+      document
+        .getElementById("clearAllBtn")
+        .addEventListener("click", clearAllQuantities);
+      document
+        .getElementById("exportUrgentBtn")
+        .addEventListener("click", exportUrgentCSV);
+      document
+        .getElementById("exportPdfBtn")
+        .addEventListener("click", exportUrgentPDF);
+      document
+        .getElementById("printUrgentBtn")
+        .addEventListener("click", printUrgent);
+
+      // Boot
+      initStore();
+      renderSummary();
+      renderCategories();
+
+      // Rotating ads
+      const adImages = [
+        "vehiculo_dekra.jpg",
+        "clases_manejo.jpg",
+        "Espanol.jpg",
+        "impresiones.jpg",
+        "LAL.jpg",
+        "sabe_ingles.jpg",
+        "necesita_pagina_web.png",
+        "ejercicios_interactivos.png",
+        "curriculo.jpg",
+      ];
+      let adIndex = 0;
+      function rotateAdImages() {
+        const adImg = document.getElementById("adImage");
+        adImg.style.opacity = 0;
+        setTimeout(() => {
+          adImg.src = adImages[adIndex];
+          adImg.style.opacity = 1;
+          adIndex = (adIndex + 1) % adImages.length;
+        }, 500);
+      }
+      setInterval(rotateAdImages, 6000);
+    </script>
+  </body>
+</html>
